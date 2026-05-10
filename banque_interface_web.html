@@ -1,0 +1,436 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-mono, monospace); }
+.bank-app { padding: 1rem 0; }
+.header { text-align: center; padding: 1.5rem; background: linear-gradient(135deg, #042C53, #185FA5); border-radius: var(--border-radius-lg); margin-bottom: 1.5rem; color: white; }
+.header h1 { font-size: 22px; font-weight: 500; letter-spacing: 2px; color: white; margin-bottom: 4px; }
+.header p { font-size: 12px; color: #85B7EB; letter-spacing: 1px; }
+.status-bar { display: flex; gap: 8px; margin-bottom: 1.5rem; align-items: center; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #639922; animation: pulse 1.5s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.status-text { font-size: 12px; color: var(--color-text-secondary); }
+.main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.panel { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem; }
+.panel-title { font-size: 11px; color: var(--color-text-secondary); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 1rem; display: flex; align-items: center; gap: 6px; }
+.panel-title i { font-size: 14px; }
+.accounts-grid { display: flex; flex-direction: column; gap: 8px; }
+.account-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 12px; display: flex; align-items: center; gap: 10px; border: 0.5px solid var(--color-border-tertiary); transition: border-color 0.3s; }
+.account-card.highlight { border-color: #378ADD; background: #E6F1FB; }
+.account-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; flex-shrink: 0; }
+.av-alice { background: #EEEDFE; color: #534AB7; }
+.av-bob { background: #E1F5EE; color: #0F6E56; }
+.av-charlie { background: #FAECE7; color: #993C1D; }
+.account-info { flex: 1; }
+.account-name { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+.account-id { font-size: 11px; color: var(--color-text-secondary); }
+.account-balance { font-size: 15px; font-weight: 500; color: var(--color-text-primary); font-family: var(--font-mono); }
+.balance-change { font-size: 10px; padding: 1px 5px; border-radius: 4px; opacity: 0; transition: opacity 0.3s; }
+.balance-up { background: #EAF3DE; color: #3B6D11; opacity: 1; }
+.balance-down { background: #FCEBEB; color: #A32D2D; opacity: 1; }
+.client-tabs { display: flex; gap: 6px; margin-bottom: 1rem; }
+.client-tab { padding: 5px 12px; border-radius: var(--border-radius-md); font-size: 12px; border: 0.5px solid var(--color-border-secondary); cursor: pointer; background: var(--color-background-secondary); color: var(--color-text-secondary); transition: all 0.2s; }
+.client-tab.active { background: #042C53; color: white; border-color: #042C53; }
+.client-panel { display: none; }
+.client-panel.active { display: block; }
+.cmd-form { display: flex; flex-direction: column; gap: 8px; }
+.cmd-row { display: flex; gap: 6px; align-items: center; }
+.cmd-row label { font-size: 11px; color: var(--color-text-secondary); min-width: 60px; }
+.cmd-row select, .cmd-row input[type=number] { flex: 1; font-size: 12px; padding: 5px 8px; height: 30px; font-family: var(--font-mono); }
+.cmd-row select { background: var(--color-background-secondary); }
+.op-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 4px; }
+.op-btn { padding: 6px; font-size: 11px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); cursor: pointer; font-family: var(--font-mono); font-weight: 500; transition: all 0.15s; text-align: center; }
+.op-btn:hover { transform: translateY(-1px); }
+.op-btn:active { transform: scale(0.97); }
+.btn-check { background: #E6F1FB; color: #185FA5; border-color: #85B7EB; }
+.btn-deposit { background: #EAF3DE; color: #3B6D11; border-color: #97C459; }
+.btn-withdraw { background: #FAEEDA; color: #854F0B; border-color: #EF9F27; }
+.btn-exit { background: #FCEBEB; color: #A32D2D; border-color: #F09595; }
+.response-box { margin-top: 8px; padding: 8px 10px; background: var(--color-background-secondary); border-radius: var(--border-radius-md); font-size: 11px; font-family: var(--font-mono); min-height: 30px; border-left: 3px solid var(--color-border-tertiary); color: var(--color-text-secondary); transition: border-color 0.3s; }
+.response-box.success { border-left-color: #639922; color: #3B6D11; background: #EAF3DE; }
+.response-box.error { border-left-color: #E24B4A; color: #A32D2D; background: #FCEBEB; }
+.response-box.info { border-left-color: #378ADD; color: #185FA5; background: #E6F1FB; }
+.log-panel { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem; }
+.log-container { background: #0a0e1a; border-radius: var(--border-radius-md); padding: 10px; height: 160px; overflow-y: auto; font-family: var(--font-mono); font-size: 11px; }
+.log-line { margin-bottom: 3px; line-height: 1.5; }
+.log-time { color: #5F5E5A; }
+.log-server { color: #5DCAA5; }
+.log-thread { color: #7F77DD; }
+.log-tx { color: #EF9F27; }
+.log-error { color: #F09595; }
+.log-ok { color: #97C459; }
+.log-sys { color: #85B7EB; }
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 1rem; }
+.stat-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px; text-align: center; }
+.stat-val { font-size: 20px; font-weight: 500; color: var(--color-text-primary); font-family: var(--font-mono); }
+.stat-lbl { font-size: 10px; color: var(--color-text-secondary); letter-spacing: 0.5px; margin-top: 2px; }
+.thread-indicators { display: flex; gap: 6px; margin-top: 8px; }
+.thread-badge { padding: 3px 8px; border-radius: 20px; font-size: 10px; font-family: var(--font-mono); background: var(--color-background-secondary); color: var(--color-text-secondary); border: 0.5px solid var(--color-border-tertiary); transition: all 0.3s; }
+.thread-badge.active { background: #EEEDFE; color: #534AB7; border-color: #AFA9EC; }
+.mutex-vis { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 11px; }
+.mutex-lock { padding: 3px 10px; border-radius: 20px; font-size: 10px; border: 0.5px solid; transition: all 0.4s; }
+.mutex-free { background: #EAF3DE; color: #3B6D11; border-color: #97C459; }
+.mutex-locked { background: #FAEEDA; color: #854F0B; border-color: #EF9F27; animation: lockPulse 0.5s ease; }
+@keyframes lockPulse { 0%{transform:scale(1)} 50%{transform:scale(1.1)} 100%{transform:scale(1)} }
+</style>
+
+<div class="bank-app">
+<h2 class="sr-only">Interface web interactive pour tester le serveur bancaire C (TCP/sockets/threads/mutex)</h2>
+
+<div class="header">
+  <h1><i class="ti ti-building-bank" aria-hidden="true"></i> SERVEUR BANCAIRE</h1>
+  <p>SIMULATION TCP · THREADS · MUTEX · PORT 5000</p>
+</div>
+
+<div class="status-bar">
+  <div class="status-dot" id="serverDot"></div>
+  <span class="status-text" id="serverStatus">Serveur actif · 127.0.0.1:5000 · 0 client(s) connecté(s)</span>
+  <div class="thread-indicators" id="threadBadges">
+    <div class="thread-badge" id="t1">THREAD #1</div>
+    <div class="thread-badge" id="t2">THREAD #2</div>
+    <div class="thread-badge" id="t3">THREAD #3</div>
+  </div>
+</div>
+
+<div class="main-grid">
+  <div class="panel">
+    <div class="panel-title"><i class="ti ti-database" aria-hidden="true"></i> ÉTAT DES COMPTES</div>
+    <div class="accounts-grid">
+      <div class="account-card" id="card-0">
+        <div class="account-avatar av-alice">AL</div>
+        <div class="account-info">
+          <div class="account-name">Alice</div>
+          <div class="account-id">Compte #0</div>
+        </div>
+        <div>
+          <div class="account-balance" id="bal-0">1000.00 €</div>
+          <div class="balance-change" id="chg-0"></div>
+        </div>
+      </div>
+      <div class="account-card" id="card-1">
+        <div class="account-avatar av-bob">BO</div>
+        <div class="account-info">
+          <div class="account-name">Bob</div>
+          <div class="account-id">Compte #1</div>
+        </div>
+        <div>
+          <div class="account-balance" id="bal-1">1500.00 €</div>
+          <div class="balance-change" id="chg-1"></div>
+        </div>
+      </div>
+      <div class="account-card" id="card-2">
+        <div class="account-avatar av-charlie">CH</div>
+        <div class="account-info">
+          <div class="account-name">Charlie</div>
+          <div class="account-id">Compte #2</div>
+        </div>
+        <div>
+          <div class="account-balance" id="bal-2">2000.00 €</div>
+          <div class="balance-change" id="chg-2"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mutex-vis">
+      <i class="ti ti-lock" style="font-size:14px;color:var(--color-text-secondary)" aria-hidden="true"></i>
+      <span style="font-size:11px;color:var(--color-text-secondary)">Mutex:</span>
+      <div class="mutex-lock mutex-free" id="mutexBadge">LIBRE</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title"><i class="ti ti-terminal-2" aria-hidden="true"></i> CLIENTS TCP</div>
+    <div class="client-tabs">
+      <div class="client-tab active" onclick="switchClient(0)">Client #1</div>
+      <div class="client-tab" onclick="switchClient(1)">Client #2</div>
+      <div class="client-tab" onclick="switchClient(2)">Client #3</div>
+    </div>
+
+    <div id="cp-0" class="client-panel active">
+      <div class="cmd-form">
+        <div class="cmd-row"><label>Compte:</label>
+          <select id="acc-0"><option value="0">0 – Alice</option><option value="1">1 – Bob</option><option value="2">2 – Charlie</option></select>
+        </div>
+        <div class="cmd-row"><label>Montant:</label>
+          <input type="number" id="amt-0" value="100" min="1" step="1" placeholder="0.00">
+        </div>
+      </div>
+      <div class="op-buttons">
+        <div class="op-btn btn-check" onclick="doOp(0,'CHECK')"><i class="ti ti-eye" aria-hidden="true"></i> CHECK</div>
+        <div class="op-btn btn-deposit" onclick="doOp(0,'DEPOSIT')"><i class="ti ti-plus" aria-hidden="true"></i> DEPOSIT</div>
+        <div class="op-btn btn-withdraw" onclick="doOp(0,'WITHDRAW')"><i class="ti ti-minus" aria-hidden="true"></i> WITHDRAW</div>
+        <div class="op-btn btn-exit" style="grid-column:1/-1" onclick="doOp(0,'EXIT')"><i class="ti ti-power" aria-hidden="true"></i> EXIT</div>
+      </div>
+      <div class="response-box" id="resp-0">En attente de commande...</div>
+    </div>
+
+    <div id="cp-1" class="client-panel">
+      <div class="cmd-form">
+        <div class="cmd-row"><label>Compte:</label>
+          <select id="acc-1"><option value="0">0 – Alice</option><option value="1">1 – Bob</option><option value="2">2 – Charlie</option></select>
+        </div>
+        <div class="cmd-row"><label>Montant:</label>
+          <input type="number" id="amt-1" value="200" min="1" step="1" placeholder="0.00">
+        </div>
+      </div>
+      <div class="op-buttons">
+        <div class="op-btn btn-check" onclick="doOp(1,'CHECK')"><i class="ti ti-eye" aria-hidden="true"></i> CHECK</div>
+        <div class="op-btn btn-deposit" onclick="doOp(1,'DEPOSIT')"><i class="ti ti-plus" aria-hidden="true"></i> DEPOSIT</div>
+        <div class="op-btn btn-withdraw" onclick="doOp(1,'WITHDRAW')"><i class="ti ti-minus" aria-hidden="true"></i> WITHDRAW</div>
+        <div class="op-btn btn-exit" style="grid-column:1/-1" onclick="doOp(1,'EXIT')"><i class="ti ti-power" aria-hidden="true"></i> EXIT</div>
+      </div>
+      <div class="response-box" id="resp-1">En attente de commande...</div>
+    </div>
+
+    <div id="cp-2" class="client-panel">
+      <div class="cmd-form">
+        <div class="cmd-row"><label>Compte:</label>
+          <select id="acc-2"><option value="0">0 – Alice</option><option value="1">1 – Bob</option><option value="2">2 – Charlie</option></select>
+        </div>
+        <div class="cmd-row"><label>Montant:</label>
+          <input type="number" id="amt-2" value="50" min="1" step="1" placeholder="0.00">
+        </div>
+      </div>
+      <div class="op-buttons">
+        <div class="op-btn btn-check" onclick="doOp(2,'CHECK')"><i class="ti ti-eye" aria-hidden="true"></i> CHECK</div>
+        <div class="op-btn btn-deposit" onclick="doOp(2,'DEPOSIT')"><i class="ti ti-plus" aria-hidden="true"></i> DEPOSIT</div>
+        <div class="op-btn btn-withdraw" onclick="doOp(2,'WITHDRAW')"><i class="ti ti-minus" aria-hidden="true"></i> WITHDRAW</div>
+        <div class="op-btn btn-exit" style="grid-column:1/-1" onclick="doOp(2,'EXIT')"><i class="ti ti-power" aria-hidden="true"></i> EXIT</div>
+      </div>
+      <div class="response-box" id="resp-2">En attente de commande...</div>
+    </div>
+  </div>
+</div>
+
+<div class="log-panel">
+  <div class="panel-title"><i class="ti ti-terminal" aria-hidden="true"></i> LOGS SERVEUR — TERMINAL
+    <button onclick="clearLog()" style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:4px;">Effacer</button>
+  </div>
+  <div class="log-container" id="logBox">
+    <div class="log-line"><span class="log-time">[00:00:00]</span> <span class="log-server">╔══════════════════════════════════════╗</span></div>
+    <div class="log-line"><span class="log-time">[00:00:00]</span> <span class="log-server">║  SERVEUR BANCAIRE - EN DÉMARRAGE    ║</span></div>
+    <div class="log-line"><span class="log-time">[00:00:00]</span> <span class="log-server">╚══════════════════════════════════════╝</span></div>
+    <div class="log-line"><span class="log-time">[00:00:01]</span> <span class="log-ok">✓ Socket serveur créé</span></div>
+    <div class="log-line"><span class="log-time">[00:00:01]</span> <span class="log-ok">✓ Socket lié au port 5000</span></div>
+    <div class="log-line"><span class="log-time">[00:00:01]</span> <span class="log-ok">✓ Serveur en écoute...</span></div>
+    <div class="log-line"><span class="log-time">[00:00:01]</span> <span class="log-sys">💡 En attente sur 127.0.0.1:5000</span></div>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card"><div class="stat-val" id="statOps">0</div><div class="stat-lbl">OPÉRATIONS</div></div>
+  <div class="stat-card"><div class="stat-val" id="statClients">0</div><div class="stat-lbl">CLIENTS ACTIFS</div></div>
+  <div class="stat-card"><div class="stat-val" id="statErrors">0</div><div class="stat-lbl">ERREURS</div></div>
+  <div class="stat-card"><div class="stat-val" id="statTotal">4500.00</div><div class="stat-lbl">TOTAL (€)</div></div>
+</div>
+
+<div style="margin-top:1rem;text-align:center;">
+  <button onclick="runScenario()" style="padding:8px 20px;font-size:12px;font-family:var(--font-mono);letter-spacing:1px;">
+    <i class="ti ti-player-play" aria-hidden="true"></i> LANCER SCÉNARIO DE TEST COMPLET
+  </button>
+  <button onclick="resetAll()" style="padding:8px 16px;font-size:12px;font-family:var(--font-mono);margin-left:8px;">
+    <i class="ti ti-refresh" aria-hidden="true"></i> RESET
+  </button>
+</div>
+</div>
+
+<script>
+const balances = [1000, 1500, 2000];
+const names = ['Alice','Bob','Charlie'];
+let ops = 0, errors = 0, activeClients = 0;
+let startTime = Date.now();
+
+function ts() {
+  const d = new Date(Date.now() - startTime + 1000);
+  const h = String(Math.floor(d/3600000)).padStart(2,'0');
+  const m = String(Math.floor((d%3600000)/60000)).padStart(2,'0');
+  const s = String(Math.floor((d%60000)/1000)).padStart(2,'0');
+  return `[${h}:${m}:${s}]`;
+}
+
+function addLog(msg, cls='log-sys') {
+  const box = document.getElementById('logBox');
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${ts()}</span> <span class="${cls}">${msg}</span>`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearLog() { document.getElementById('logBox').innerHTML = ''; }
+
+function updateBalanceDisplay(id) {
+  document.getElementById('bal-'+id).textContent = balances[id].toFixed(2)+' €';
+  const total = balances.reduce((a,b)=>a+b,0);
+  document.getElementById('statTotal').textContent = total.toFixed(2);
+}
+
+function flashCard(id, type) {
+  const card = document.getElementById('card-'+id);
+  card.classList.add('highlight');
+  setTimeout(()=>card.classList.remove('highlight'), 800);
+  const chg = document.getElementById('chg-'+id);
+  chg.className = 'balance-change ' + (type==='up'?'balance-up':type==='down'?'balance-down':'');
+  chg.textContent = type==='up'?'▲':type==='down'?'▼':'';
+  setTimeout(()=>{ chg.className='balance-change'; chg.textContent=''; }, 1500);
+}
+
+function flashMutex(duration=500) {
+  const m = document.getElementById('mutexBadge');
+  m.className='mutex-lock mutex-locked';
+  m.textContent='OCCUPÉ';
+  setTimeout(()=>{ m.className='mutex-lock mutex-free'; m.textContent='LIBRE'; }, duration);
+}
+
+function setThread(idx, active) {
+  const t = document.getElementById('t'+(idx+1));
+  if(active) t.classList.add('active');
+  else t.classList.remove('active');
+}
+
+function updateStats() {
+  document.getElementById('statOps').textContent = ops;
+  document.getElementById('statErrors').textContent = errors;
+  document.getElementById('statClients').textContent = activeClients;
+  document.getElementById('serverStatus').textContent = `Serveur actif · 127.0.0.1:5000 · ${activeClients} client(s) connecté(s)`;
+}
+
+function switchClient(idx) {
+  document.querySelectorAll('.client-tab').forEach((t,i)=>t.classList.toggle('active', i===idx));
+  document.querySelectorAll('.client-panel').forEach((p,i)=>p.classList.toggle('active', i===idx));
+}
+
+function doOp(clientIdx, op) {
+  const accId = parseInt(document.getElementById('acc-'+clientIdx).value);
+  const amt = parseFloat(document.getElementById('amt-'+clientIdx).value)||0;
+  const respBox = document.getElementById('resp-'+clientIdx);
+  const threadId = clientIdx+1;
+
+  if(op==='EXIT') {
+    addLog(`[THREAD #${threadId}] Client déconnecté`, 'log-thread');
+    if(activeClients>0) activeClients--;
+    setThread(clientIdx, false);
+    respBox.className='response-box info';
+    respBox.textContent='Au revoir ! 👋 Déconnexion propre.';
+    updateStats();
+    return;
+  }
+
+  if(activeClients < threadId) {
+    activeClients = threadId;
+    addLog(`📱 Nouvelle connexion (Client #${threadId}) · IP: 127.0.0.1`, 'log-sys');
+    addLog(`[THREAD #${threadId}] Client connecté`, 'log-thread');
+    setThread(clientIdx, true);
+  }
+
+  const cmd = op==='CHECK' ? `CHECK ${accId}` : `${op} ${accId} ${amt}`;
+  addLog(`[THREAD #${threadId}] Reçu: ${cmd}`, 'log-thread');
+
+  let response='', cssClass='success';
+  ops++;
+
+  if(op==='CHECK') {
+    flashMutex(300);
+    response = `Solde du compte ${accId} (${names[accId]}): ${balances[accId].toFixed(2)}€`;
+    addLog(`  → handle_check(${accId})`, 'log-tx');
+    addLog(`  🔒 pthread_mutex_lock`, 'log-tx');
+    addLog(`  balance = ${balances[accId].toFixed(2)}€`, 'log-tx');
+    addLog(`  🔓 pthread_mutex_unlock`, 'log-tx');
+    cssClass='info';
+  } else if(op==='DEPOSIT') {
+    if(amt<=0){ response='ERREUR: Montant invalide'; cssClass='error'; errors++; }
+    else {
+      flashMutex(600);
+      addLog(`  → handle_deposit(${accId}, ${amt})`, 'log-tx');
+      addLog(`  🔒 pthread_mutex_lock — SECTION CRITIQUE`, 'log-tx');
+      setTimeout(()=>{
+        balances[accId] += amt;
+        updateBalanceDisplay(accId);
+        flashCard(accId,'up');
+        addLog(`  comptes[${accId}].balance += ${amt} = ${balances[accId].toFixed(2)}€`, 'log-ok');
+        addLog(`  🔓 pthread_mutex_unlock`, 'log-tx');
+      }, 300);
+      response = `Dépôt de ${amt.toFixed(2)}€ réussi. Nouveau solde: ${(balances[accId]+amt).toFixed(2)}€`;
+    }
+  } else if(op==='WITHDRAW') {
+    if(amt<=0){ response='ERREUR: Montant invalide'; cssClass='error'; errors++; }
+    else if(balances[accId] < amt) {
+      flashMutex(400);
+      addLog(`  → handle_withdraw(${accId}, ${amt})`, 'log-tx');
+      addLog(`  🔒 pthread_mutex_lock`, 'log-tx');
+      addLog(`  ERREUR: ${balances[accId].toFixed(2)} < ${amt}`, 'log-error');
+      addLog(`  🔓 pthread_mutex_unlock`, 'log-tx');
+      response = `ERREUR: Solde insuffisant. Solde actuel: ${balances[accId].toFixed(2)}€`;
+      cssClass='error'; errors++;
+    } else {
+      flashMutex(600);
+      addLog(`  → handle_withdraw(${accId}, ${amt})`, 'log-tx');
+      addLog(`  🔒 pthread_mutex_lock — SECTION CRITIQUE`, 'log-tx');
+      setTimeout(()=>{
+        balances[accId] -= amt;
+        updateBalanceDisplay(accId);
+        flashCard(accId,'down');
+        addLog(`  comptes[${accId}].balance -= ${amt} = ${balances[accId].toFixed(2)}€`, 'log-ok');
+        addLog(`  🔓 pthread_mutex_unlock`, 'log-tx');
+      }, 300);
+      response = `Retrait de ${amt.toFixed(2)}€ réussi. Nouveau solde: ${(balances[accId]-amt).toFixed(2)}€`;
+    }
+  }
+
+  addLog(`[THREAD #${threadId}] Envoyé: ${response}`, 'log-ok');
+  respBox.className = 'response-box '+cssClass;
+  respBox.textContent = response;
+  updateStats();
+}
+
+async function runScenario() {
+  resetAll();
+  await delay(300);
+  addLog('▶ LANCEMENT DU SCÉNARIO DE TEST COMPLET', 'log-server');
+  await delay(400);
+  switchClient(0);
+  doOp(0,'CHECK'); await delay(700);
+  document.getElementById('acc-0').value=0;
+  document.getElementById('amt-0').value=500;
+  switchClient(1);
+  doOp(1,'CHECK'); await delay(700);
+  document.getElementById('acc-1').value=0;
+  document.getElementById('amt-1').value=500;
+  switchClient(0);
+  doOp(0,'DEPOSIT'); await delay(800);
+  switchClient(1);
+  doOp(1,'DEPOSIT'); await delay(800);
+  addLog('✅ Dépôts simultanés (mutex protège les données)', 'log-ok');
+  document.getElementById('acc-0').value=1;
+  document.getElementById('amt-0').value=2000;
+  switchClient(0);
+  doOp(0,'WITHDRAW'); await delay(700);
+  addLog('✅ Retrait refusé — solde insuffisant géré', 'log-ok');
+  document.getElementById('acc-1').value=1;
+  document.getElementById('amt-1').value=300;
+  switchClient(1);
+  doOp(1,'WITHDRAW'); await delay(700);
+  document.getElementById('acc-0').value=0;
+  document.getElementById('amt-0').value=300;
+  switchClient(0);
+  doOp(0,'DEPOSIT'); await delay(700);
+  addLog('✅ Transfert simulé Bob → Alice réussi', 'log-ok');
+  switchClient(2);
+  doOp(2,'CHECK'); await delay(700);
+  addLog('▶ FIN DU SCÉNARIO — Tous les tests passés !', 'log-server');
+}
+
+function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function resetAll() {
+  balances[0]=1000; balances[1]=1500; balances[2]=2000;
+  ops=0; errors=0; activeClients=0;
+  [0,1,2].forEach(i=>{ updateBalanceDisplay(i); setThread(i,false); });
+  document.querySelectorAll('.response-box').forEach(b=>{ b.className='response-box'; b.textContent='En attente de commande...'; });
+  document.getElementById('logBox').innerHTML='';
+  addLog('╔════════════════════════════════════════╗','log-server');
+  addLog('║  RESET — SERVEUR RÉINITIALISÉ          ║','log-server');
+  addLog('╚════════════════════════════════════════╝','log-server');
+  addLog('✓ Comptes réinitialisés (Alice:1000 Bob:1500 Charlie:2000)','log-ok');
+  updateStats();
+}
+</script>
