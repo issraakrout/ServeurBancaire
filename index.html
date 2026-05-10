@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Banque Distribuée</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: monospace; background: #0a0e1a; color: #e0e0e0; padding: 20px; }
+  h1 { color: #5DCAA5; text-align: center; margin-bottom: 20px; letter-spacing: 3px; }
+  .card { background: #121726; border: 1px solid #1e2d4a; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .status { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #639922; }
+  .dot.off { background: #E24B4A; }
+  label { color: #85B7EB; font-size: 12px; display: block; margin-bottom: 4px; }
+  select, input { width: 100%; background: #0d1321; border: 1px solid #1e2d4a; color: #e0e0e0;
+    padding: 8px; border-radius: 6px; font-family: monospace; margin-bottom: 12px; }
+  .btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  button { padding: 10px; border-radius: 6px; border: 1px solid; cursor: pointer;
+    font-family: monospace; font-size: 13px; font-weight: bold; transition: opacity 0.2s; }
+  button:hover { opacity: 0.8; }
+  .btn-check    { background: #0d2035; color: #85B7EB; border-color: #378ADD; }
+  .btn-deposit  { background: #0d200d; color: #97C459; border-color: #639922; }
+  .btn-withdraw { background: #201a0d; color: #EF9F27; border-color: #BA7517; }
+  .btn-exit     { background: #200d0d; color: #F09595; border-color: #E24B4A; grid-column: 1/-1; }
+  .response { background: #080c14; border-left: 3px solid #378ADD; padding: 10px 14px;
+    border-radius: 4px; font-size: 13px; min-height: 40px; margin-top: 12px; color: #85B7EB; }
+  .response.ok   { border-color: #639922; color: #97C459; }
+  .response.err  { border-color: #E24B4A; color: #F09595; }
+  .log { background: #080c14; border-radius: 8px; padding: 10px; height: 150px;
+    overflow-y: auto; font-size: 11px; }
+  .log div { margin-bottom: 3px; }
+  .t-ok { color: #5DCAA5; } .t-err { color: #F09595; } .t-sys { color: #85B7EB; }
+  #ip-input { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<h1>🏦 BANQUE DISTRIBUÉE</h1>
+
+<div class="card">
+  <label>Adresse IP du serveur</label>
+  <input id="ip-input" type="text" value="192.168.1.42" placeholder="IP du PC serveur">
+  <button onclick="connect()" class="btn-check" style="width:100%;margin-top:8px">
+    Se connecter
+  </button>
+  <div class="status" style="margin-top:12px;margin-bottom:0">
+    <div class="dot off" id="dot"></div>
+    <span id="status-text" style="font-size:12px;color:#5F5E5A">Non connecté</span>
+  </div>
+</div>
+
+<div class="card">
+  <label>Compte</label>
+  <select id="compte">
+    <option value="0">0 — Alice</option>
+    <option value="1">1 — Bob</option>
+    <option value="2">2 — Charlie</option>
+  </select>
+  <label>Montant (€)</label>
+  <input type="number" id="montant" value="100" min="1">
+  <div class="btns">
+    <button class="btn-check"    onclick="send('CHECK')">👁 CHECK</button>
+    <button class="btn-deposit"  onclick="send('DEPOSIT')">➕ DEPOSIT</button>
+    <button class="btn-withdraw" onclick="send('WITHDRAW')">➖ WITHDRAW</button>
+    <button class="btn-exit"     onclick="send('EXIT')">⏻ EXIT</button>
+  </div>
+  <div class="response" id="response">En attente...</div>
+</div>
+
+<div class="card">
+  <div style="font-size:11px;color:#5F5E5A;margin-bottom:8px">LOGS</div>
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+let ws = null;
+
+function log(msg, cls='t-sys') {
+  const box = document.getElementById('log');
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+
+function connect() {
+  const ip = document.getElementById('ip-input').value.trim();
+  if (ws) ws.close();
+  ws = new WebSocket('ws://' + ip + ':8765');
+
+  ws.onopen = () => {
+    document.getElementById('dot').classList.remove('off');
+    document.getElementById('status-text').textContent = 'Connecté à ' + ip + ':8765';
+    log('Connecté au bridge sur ' + ip);
+  };
+
+  ws.onmessage = (e) => {
+    const resp = document.getElementById('response');
+    resp.textContent = e.data;
+    resp.className = 'response ' + (e.data.includes('ERREUR') ? 'err' : 'ok');
+    log('Réponse: ' + e.data, e.data.includes('ERREUR') ? 't-err' : 't-ok');
+  };
+
+  ws.onclose = () => {
+    document.getElementById('dot').classList.add('off');
+    document.getElementById('status-text').textContent = 'Déconnecté';
+    log('Connexion fermée', 't-err');
+  };
+
+  ws.onerror = () => log('Erreur de connexion WebSocket', 't-err');
+}
+
+function send(op) {
+  if (!ws || ws.readyState !== 1) {
+    alert('Connecte-toi d\'abord au serveur !'); return;
+  }
+  const compte = document.getElementById('compte').value;
+  const montant = document.getElementById('montant').value;
+  let cmd = op === 'CHECK' ? 'CHECK ' + compte
+          : op === 'EXIT'  ? 'EXIT'
+          : op + ' ' + compte + ' ' + montant;
+  log('Envoi: ' + cmd);
+  ws.send(cmd);
+}
+</script>
+</body>
+</html>
